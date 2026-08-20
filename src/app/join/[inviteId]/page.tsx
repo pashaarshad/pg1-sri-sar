@@ -87,7 +87,6 @@ export default function TenantJoinPage({ params }: { params: { inviteId: string 
       return "Please enter a valid 12-digit Aadhaar Card number.";
     }
     if (!aadhaarFront) return "Aadhaar card front side photo is required.";
-    if (!aadhaarBack) return "Aadhaar card back side photo is required.";
     return null;
   };
 
@@ -425,39 +424,29 @@ export default function TenantJoinPage({ params }: { params: { inviteId: string 
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2.5">
-                    {/* Hidden inputs triggered programmatically by ref */}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      capture="user" 
-                      ref={photoCameraRef} 
-                      className="hidden" 
-                      onChange={(e) => handleFileUpload(e, setPhotoPreview)} 
-                    />
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      ref={photoGalleryRef} 
-                      className="hidden" 
-                      onChange={(e) => handleFileUpload(e, setPhotoPreview)} 
-                    />
-
-                    <button 
-                      type="button"
-                      onClick={() => photoCameraRef.current?.click()}
-                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm cursor-pointer"
-                    >
+                    {/* Use labels wrapping native inputs for strict mobile camera intents */}
+                    <label className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm cursor-pointer relative overflow-hidden">
                       <Camera className="w-4 h-4" />
                       Take Live Selfie / Camera
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => photoGalleryRef.current?.click()}
-                      className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm cursor-pointer"
-                    >
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        capture="user" 
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                        onChange={(e) => handleFileUpload(e, setPhotoPreview)} 
+                      />
+                    </label>
+
+                    <label className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm cursor-pointer relative overflow-hidden">
                       <Upload className="w-4 h-4 text-blue-600" />
                       Choose from Gallery
-                    </button>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                        onChange={(e) => handleFileUpload(e, setPhotoPreview)} 
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -492,43 +481,32 @@ export default function TenantJoinPage({ params }: { params: { inviteId: string 
                     )}
                   </div>
                   
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="environment" 
-                    ref={aadhaarFrontCameraRef} 
-                    className="hidden" 
-                    onChange={(e) => handleFileUpload(e, setAadhaarFront)} 
-                  />
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    ref={aadhaarFrontGalleryRef} 
-                    className="hidden" 
-                    onChange={(e) => handleFileUpload(e, setAadhaarFront)} 
-                  />
-
                   <div className="flex gap-2">
-                    <button 
-                      type="button"
-                      onClick={() => aadhaarFrontCameraRef.current?.click()}
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg transition-colors cursor-pointer"
-                    >
+                    <label className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg transition-colors cursor-pointer relative overflow-hidden">
                       <Camera className="w-3.5 h-3.5" /> Camera
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => aadhaarFrontGalleryRef.current?.click()}
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold py-2 rounded-lg transition-colors shadow-sm cursor-pointer"
-                    >
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        capture="environment" 
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                        onChange={(e) => handleFileUpload(e, setAadhaarFront)} 
+                      />
+                    </label>
+                    <label className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold py-2 rounded-lg transition-colors shadow-sm cursor-pointer relative overflow-hidden">
                       <Upload className="w-3.5 h-3.5" /> Upload
-                    </button>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                        onChange={(e) => handleFileUpload(e, setAadhaarFront)} 
+                      />
+                    </label>
                   </div>
                 </div>
 
                 {/* Back */}
                 <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50/50 text-center">
-                  <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Aadhaar Back Side *</p>
+                  <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Aadhaar Back Side (Optional)</p>
                   <div className="aspect-[1.6/1] w-full rounded-xl border border-dashed border-gray-300 bg-gray-100 mb-4 flex items-center justify-center overflow-hidden">
                     {aadhaarBack ? (
                       <img src={aadhaarBack} alt="Aadhaar Back" className="w-full h-full object-cover" />
@@ -537,37 +515,26 @@ export default function TenantJoinPage({ params }: { params: { inviteId: string 
                     )}
                   </div>
 
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="environment" 
-                    ref={aadhaarBackCameraRef} 
-                    className="hidden" 
-                    onChange={(e) => handleFileUpload(e, setAadhaarBack)} 
-                  />
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    ref={aadhaarBackGalleryRef} 
-                    className="hidden" 
-                    onChange={(e) => handleFileUpload(e, setAadhaarBack)} 
-                  />
-
                   <div className="flex gap-2">
-                    <button 
-                      type="button"
-                      onClick={() => aadhaarBackCameraRef.current?.click()}
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg transition-colors cursor-pointer"
-                    >
+                    <label className="flex-1 flex items-center justify-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg transition-colors cursor-pointer relative overflow-hidden">
                       <Camera className="w-3.5 h-3.5" /> Camera
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => aadhaarBackGalleryRef.current?.click()}
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold py-2 rounded-lg transition-colors shadow-sm cursor-pointer"
-                    >
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        capture="environment" 
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                        onChange={(e) => handleFileUpload(e, setAadhaarBack)} 
+                      />
+                    </label>
+                    <label className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold py-2 rounded-lg transition-colors shadow-sm cursor-pointer relative overflow-hidden">
                       <Upload className="w-3.5 h-3.5" /> Upload
-                    </button>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                        onChange={(e) => handleFileUpload(e, setAadhaarBack)} 
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
