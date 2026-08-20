@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { BottomNav } from "@/components/layout/BottomNav";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { InviteModalListener } from "@/components/modals/InviteModalListener";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,7 +15,6 @@ export const viewport = {
   themeColor: "#ffffff",
 };
 
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -24,17 +22,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gray-50 text-gray-900 min-h-screen flex flex-col md:flex-row pb-16 md:pb-0`}>
-        {/* Desktop Sidebar */}
-        <Sidebar className="hidden md:flex" />
+      <body className={`${inter.className} bg-gray-50 text-gray-900 min-h-screen`}>
+        {children}
         
-        {/* Main Content */}
-        <main className="flex-1 overflow-x-hidden pb-6">
-          {children}
-        </main>
-
-        {/* Mobile Bottom Navigation */}
-        <BottomNav className="md:hidden" />
+        {/* Global Invite Link Modal Listener */}
+        <InviteModalListener />
       </body>
     </html>
   );
