@@ -10,8 +10,12 @@ export const metadata: Metadata = {
   title: "ABC DEF PG",
   description: "PG Management System",
   manifest: "/manifest.json",
+};
+
+export const viewport = {
   themeColor: "#ffffff",
 };
+
 
 export default function RootLayout({
   children,

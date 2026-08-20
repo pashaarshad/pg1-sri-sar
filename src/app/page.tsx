@@ -1,6 +1,8 @@
 import { Plus, Share2, Eye, UserPlus, CreditCard, ChevronRight, AlertCircle } from "lucide-react";
 import { getDashboardStats } from "@/actions/dashboard";
 import { seedAllData, clearAllData } from "@/actions/seed";
+import { cn } from "@/lib/utils";
+
 
 export default async function Dashboard() {
   const stats = await getDashboardStats() || {
