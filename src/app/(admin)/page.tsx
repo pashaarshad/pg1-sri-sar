@@ -136,7 +136,7 @@ export default async function Dashboard() {
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900">Payment Overview</h3>
-                  <p className="text-xs text-gray-400">{new Date().toLocaleString("en-GB", { month: "long", year: "numeric" })}</p>
+                  <p className="text-xs text-gray-400">{stats.payment.currentMonth}</p>
                 </div>
               </div>
               <Link href="/payments" className="text-blue-600 text-sm font-semibold hover:underline flex items-center gap-1">

@@ -1,7 +1,8 @@
 "use client";
 
 import { X, Copy, Check, MessageSquare, ExternalLink, Share2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { generateInviteLink } from "@/actions/invite";
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -10,15 +11,23 @@ interface InviteModalProps {
 
 export function InviteModal({ isOpen, onClose }: InviteModalProps) {
   const [copied, setCopied] = useState(false);
+  const [token, setToken] = useState("inv-loading");
   
+  useEffect(() => {
+    if (isOpen) {
+      generateInviteLink().then(res => {
+        if (res.success && res.token) setToken(res.token);
+      });
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  // Generate a random mock invite ID matching the user's style: inv-bxpn460q
-  const mockInviteUrl = `${window.location.origin}/join/inv-bxpn460q`;
+  const inviteUrl = `${window.location.origin}/join/${token}`;
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(mockInviteUrl);
+      await navigator.clipboard.writeText(inviteUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -27,7 +36,7 @@ export function InviteModal({ isOpen, onClose }: InviteModalProps) {
   };
 
   const handleWhatsAppShare = () => {
-    const text = `Welcome! Please complete your onboarding for ABC DEF PG by clicking this link: ${mockInviteUrl}`;
+    const text = `Welcome! Please complete your onboarding for ABC DEF PG by clicking this link: ${inviteUrl}`;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank");
   };
@@ -65,7 +74,7 @@ export function InviteModal({ isOpen, onClose }: InviteModalProps) {
           <input 
             type="text" 
             readOnly 
-            value={mockInviteUrl}
+            value={inviteUrl}
             className="flex-1 bg-transparent text-sm font-medium text-gray-700 outline-none select-all px-1"
           />
           <button 
@@ -97,7 +106,7 @@ export function InviteModal({ isOpen, onClose }: InviteModalProps) {
           </button>
           
           <a 
-            href={`/join/inv-bxpn460q`}
+            href={`/join/${token}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-3.5 rounded-2xl transition-colors shadow-sm"

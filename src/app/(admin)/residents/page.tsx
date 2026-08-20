@@ -111,24 +111,24 @@ export default function ResidentsPage() {
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                      {r.name.charAt(0)}
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-lg shrink-0">
+                      {r.fullName.charAt(0)}
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-gray-900 leading-tight">{r.name}</h3>
-                        <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md">{r.residentId}</span>
+                        <h3 className="font-bold text-gray-900 leading-tight">{r.fullName}</h3>
+                        <span className="text-[9px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md">{r.id}</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">{r.email}</p>
                     </div>
                   </div>
                   <span className={cn(
                     "text-[10px] font-bold px-2 py-1 rounded-full shrink-0",
-                    r.status === "Active" ? "bg-green-100 text-green-700" :
-                    r.status === "Notice Period" ? "bg-orange-100 text-orange-700" :
+                    r.status === "ACTIVE" ? "bg-green-100 text-green-700" :
+                    r.status === "NOTICE_PERIOD" ? "bg-orange-100 text-orange-700" :
                     "bg-gray-100 text-gray-600"
                   )}>
-                    {r.status === "Active" ? "ACTIVE" : r.status === "Notice Period" ? "ON NOTICE" : "VACATED"}
+                    {r.status}
                   </span>
                 </div>
 
@@ -136,27 +136,19 @@ export default function ResidentsPage() {
                 <div className="space-y-2 py-3 border-y border-gray-100 mb-3">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500 font-medium">Room & Bed</span>
-                    <span className="font-semibold text-gray-900 text-right">{r.roomName} • Bed {r.bedId || "-"}</span>
+                    <span className="font-semibold text-gray-900 text-right">{r.roomNumber} • Bed {r.bedNumber || "-"}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500 font-medium">Monthly Rent</span>
-                    <span className="font-bold text-gray-900">₹{(r.monthlyFee || 0).toLocaleString("en-IN")}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500 font-medium">Current Due (Aug)</span>
-                    {r.dueAmount > 0 ? (
-                      <span className="font-bold text-red-600">₹{r.dueAmount.toLocaleString("en-IN")} Due</span>
-                    ) : (
-                      <span className="font-bold text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Cleared</span>
-                    )}
+                    <span className="font-bold text-gray-900">₹{(r.monthlyRent || 0).toLocaleString("en-IN")}</span>
                   </div>
                 </div>
 
                 {/* Stay Duration */}
-                {r.joiningDate && r.joiningDate !== "-" && (
+                {r.moveInDate && (
                   <p className="text-xs text-gray-400 font-medium flex items-center gap-1.5 mb-3">
                     <Clock className="w-3.5 h-3.5" />
-                    Stay: {getStayDuration(r.joiningDate)} (Joined {r.joiningDate})
+                    Joined {new Date(r.moveInDate).toLocaleDateString()}
                   </p>
                 )}
 

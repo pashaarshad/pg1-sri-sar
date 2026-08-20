@@ -1,57 +1,23 @@
 "use server";
 
 import connectToDatabase from "@/lib/mongodb";
-import { Room } from "@/models/Room";
+import { RoomModel, BuildingModel, FloorModel } from "@/models/index";
 import { revalidatePath } from "next/cache";
 
-export async function getRooms() {
+export async function getRoomsData() {
   try {
     await connectToDatabase();
-    const rooms = await Room.find({}).sort({ building: 1, floor: 1, name: 1 }).lean();
-    return JSON.parse(JSON.stringify(rooms)); // Serialize for client components
+    const rooms = await RoomModel.find({}).lean();
+    const buildings = await BuildingModel.find({}).lean();
+    const floors = await FloorModel.find({}).lean();
+    
+    return {
+      rooms: JSON.parse(JSON.stringify(rooms)),
+      buildings: JSON.parse(JSON.stringify(buildings)),
+      floors: JSON.parse(JSON.stringify(floors))
+    };
   } catch (error) {
     console.error("Error fetching rooms:", error);
-    return [];
-  }
-}
-
-export async function seedInitialRooms() {
-  try {
-    await connectToDatabase();
-    const count = await Room.countDocuments();
-    
-    if (count === 0) {
-      await Room.insertMany([
-        {
-          name: "Room 101",
-          building: "Building A",
-          floor: "Ground Floor",
-          sharingType: "3 Sharing",
-          beds: [
-            { id: "B1", status: "available" },
-            { id: "B2", status: "available" },
-            { id: "B3", status: "available" },
-          ],
-        },
-        {
-          name: "Room 102",
-          building: "Building A",
-          floor: "Ground Floor",
-          sharingType: "4 Sharing",
-          beds: [
-            { id: "B1", status: "available" },
-            { id: "B2", status: "available" },
-            { id: "B3", status: "maintenance" },
-            { id: "B4", status: "available" },
-          ],
-        },
-      ]);
-      revalidatePath("/rooms");
-      return { success: true };
-    }
-    return { success: false, message: "Rooms already exist" };
-  } catch (error) {
-    console.error("Error seeding rooms:", error);
-    return { success: false, error: "Failed to seed rooms" };
+    return { rooms: [], buildings: [], floors: [] };
   }
 }

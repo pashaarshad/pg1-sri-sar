@@ -1,52 +1,77 @@
 "use server";
 
 import connectToDatabase from "@/lib/mongodb";
-import { Resident } from "@/models/Resident";
-import { Room } from "@/models/Room";
+import { ResidentModel, RoomModel, ApplicationModel, InvitationModel, PaymentModel, NotificationModel, AuditLogModel } from "@/models/index";
 import { revalidatePath } from "next/cache";
-
-function generateResidentId(): string {
-  const num = Math.floor(1000 + Math.random() * 9000);
-  return `R${num}`;
-}
 
 export async function submitApplication(formData: FormData) {
   try {
     await connectToDatabase();
 
-    const name = formData.get("name") as string;
+    const fullName = formData.get("name") as string;
     const email = formData.get("email") as string;
-    const phone = formData.get("phone") as string;
+    const mobile = formData.get("phone") as string;
     const emergencyName = formData.get("emergencyName") as string;
     const emergencyPhone = formData.get("emergencyPhone") as string;
     const emergencyRelation = formData.get("emergencyRelation") as string;
+    const invitationToken = formData.get("invitationToken") as string;
 
-    if (!name || !email || !phone || !emergencyName || !emergencyPhone || !emergencyRelation) {
+    if (!fullName || !email || !mobile || !emergencyName || !emergencyPhone) {
       return { success: false, error: "All fields are required including emergency contact." };
     }
 
-    const residentId = generateResidentId();
+    const count = (await ApplicationModel.countDocuments()) + (await ResidentModel.countDocuments());
+    const appId = `APP-${8220 + count}`;
 
-    const resident = await Resident.create({
-      residentId,
-      name,
+    const newApp = await ApplicationModel.create({
+      id: appId,
+      invitationToken,
+      status: 'PENDING',
+      fullName,
+      mobile,
       email,
-      phone,
+      gender: 'Male', // Default or from form
+      permanentAddress: 'Pending Address', // From form
       emergencyContact: {
+        relationship: emergencyRelation || 'Other',
         name: emergencyName,
-        phone: emergencyPhone,
-        relation: emergencyRelation,
+        phone: emergencyPhone
       },
-      status: "Application Pending",
-      dueAmount: 0,
-      monthlyFee: 0,
-      securityDeposit: 0,
+      submittedAt: new Date().toISOString(),
     });
 
-    revalidatePath("/residents");
+    if (invitationToken) {
+      await InvitationModel.findOneAndUpdate(
+        { token: invitationToken },
+        { used: true, usedByApplicationId: appId }
+      );
+    }
+
+    await NotificationModel.create({
+      id: `notif-${Date.now()}`,
+      recipientType: 'ADMIN',
+      title: 'New Resident Application Received',
+      message: `${fullName} has submitted an onboarding application (${appId}) for review.`,
+      channel: 'IN_APP',
+      type: 'APPLICATION',
+      linkUrl: 'applications',
+      timestamp: new Date().toISOString(),
+      read: false,
+    });
+
+    await AuditLogModel.create({
+      id: `aud-${Date.now()}`,
+      action: 'APPLICATION_SUBMITTED',
+      actor: fullName,
+      target: appId,
+      details: `Submitted onboarding application from public portal`,
+      timestamp: new Date().toISOString(),
+    });
+
+    revalidatePath("/applications");
     revalidatePath("/");
 
-    return { success: true, residentId, id: resident._id.toString() };
+    return { success: true, appId };
   } catch (error: any) {
     console.error("Application submission error:", error);
     return { success: false, error: error.message || "Failed to submit application." };
@@ -56,38 +81,121 @@ export async function submitApplication(formData: FormData) {
 export async function getResidents() {
   try {
     await connectToDatabase();
-    const residents = await Resident.find({}).lean();
-    const rooms = await Room.find({}).lean();
-
-    const enriched = residents.map((res: any) => {
-      const room = rooms.find((r: any) => r._id.toString() === res.roomId?.toString());
-      return {
-        ...res,
-        _id: res._id.toString(),
-        roomId: res.roomId?.toString() || null,
-        roomName: room ? room.name : "Unassigned",
-        joiningDate: res.joiningDate
-          ? new Date(res.joiningDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-          : "-",
-        createdAt: res.createdAt?.toString(),
-        updatedAt: res.updatedAt?.toString(),
-      };
-    });
-
-    return JSON.parse(JSON.stringify(enriched));
+    const residents = await ResidentModel.find({}).lean();
+    return JSON.parse(JSON.stringify(residents));
   } catch (error) {
     return [];
   }
 }
 
-export async function clearAllResidents() {
+export async function getApplications() {
   try {
     await connectToDatabase();
-    await Resident.deleteMany({});
+    const applications = await ApplicationModel.find({}).lean();
+    return JSON.parse(JSON.stringify(applications));
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function approveApplication(appId: string, allocation: any) {
+  try {
+    await connectToDatabase();
+    
+    const appDoc = await ApplicationModel.findOne({ id: appId });
+    if (!appDoc) return { success: false, error: 'Application not found' };
+
+    const room = await RoomModel.findOne({ id: allocation.roomId });
+    if (!room) return { success: false, error: 'Room not found' };
+
+    const bed = room.beds.find((b: any) => b.id === allocation.bedId);
+    if (!bed) return { success: false, error: 'Bed not found' };
+
+    const residentCount = await ResidentModel.countDocuments();
+    const residentId = `RES-${1040 + residentCount + 1}`;
+
+    const resident = await ResidentModel.create({
+      id: residentId,
+      applicationId: appDoc.id,
+      fullName: appDoc.fullName,
+      mobile: appDoc.mobile,
+      email: appDoc.email,
+      gender: appDoc.gender,
+      permanentAddress: appDoc.permanentAddress,
+      occupation: appDoc.occupation,
+      emergencyContact: appDoc.emergencyContact,
+      buildingId: allocation.buildingId || 'bld-default',
+      floorId: allocation.floorId || 'flr-default',
+      roomId: allocation.roomId,
+      bedId: allocation.bedId,
+      roomNumber: room.roomNumber,
+      bedNumber: bed.bedNumber,
+      sharingType: room.sharingType,
+      moveInDate: allocation.moveInDate || new Date().toISOString(),
+      monthlyRent: allocation.monthlyRent,
+      securityDeposit: allocation.securityDeposit || 0,
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      notes: allocation.notes || '',
+    });
+
+    // Update Bed Status
+    bed.status = 'Occupied';
+    bed.residentId = residentId;
+    bed.residentName = appDoc.fullName;
+    
+    // Mongoose subdocument modification saving
+    await RoomModel.updateOne(
+      { id: allocation.roomId, "beds.id": allocation.bedId },
+      { $set: { "beds.$.status": 'Occupied', "beds.$.residentId": residentId, "beds.$.residentName": appDoc.fullName } }
+    );
+
+    appDoc.status = 'APPROVED';
+    await appDoc.save();
+
+    if (allocation.securityDeposit > 0) {
+      await PaymentModel.create({
+        id: `PAY-${Date.now().toString().slice(-4)}`,
+        residentId,
+        residentName: appDoc.fullName,
+        roomNumber: room.roomNumber,
+        bedNumber: bed.bedNumber,
+        billingMonth: 'Security Deposit',
+        totalDueForMonth: allocation.securityDeposit,
+        amountPaid: allocation.securityDeposit,
+        remainingBalance: 0,
+        paymentType: 'Security Deposit',
+        paymentMethod: 'Bank Transfer',
+        status: 'Paid',
+        notes: 'Security deposit collected on admission.',
+        paidAt: new Date().toISOString(),
+        recordedBy: 'Admin',
+      });
+    }
+
+    revalidatePath("/applications");
     revalidatePath("/residents");
+    revalidatePath("/rooms");
+    revalidatePath("/payments");
+    revalidatePath("/");
+
+    return { success: true, residentId };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function rejectApplication(appId: string, reason: string) {
+  try {
+    await connectToDatabase();
+    await ApplicationModel.findOneAndUpdate(
+      { id: appId },
+      { status: 'REJECTED', rejectionReason: reason }
+    );
+    revalidatePath("/applications");
     revalidatePath("/");
     return { success: true };
-  } catch {
-    return { success: false };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }

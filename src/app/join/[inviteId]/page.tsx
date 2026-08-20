@@ -105,12 +105,14 @@ export default function TenantJoinPage({ params }: { params: { inviteId: string 
     fd.set("emergencyRelation", form.emergencyRelation);
     fd.set("emergencyName", form.emergencyName);
     fd.set("emergencyPhone", form.emergencyPhone);
+    // append invitation token
+    fd.set("invitationToken", params.inviteId);
 
     const result = await submitApplication(fd);
     setLoading(false);
 
-    if (result.success && result.residentId) {
-      setSuccess({ residentId: result.residentId });
+    if (result.success && (result.appId || result.residentId)) {
+      setSuccess({ residentId: result.appId || result.residentId });
     } else {
       setError(result.error || "Submission failed. Please try again.");
     }

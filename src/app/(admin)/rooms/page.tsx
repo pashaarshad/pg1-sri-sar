@@ -1,35 +1,25 @@
 import { Plus, Search, SlidersHorizontal, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getRooms, seedInitialRooms } from "@/actions/rooms";
+import { getRoomsData } from "@/actions/rooms";
 import { revalidatePath } from "next/cache";
 
 export default async function RoomsPage() {
-  const dbRooms = await getRooms();
-  const buildings = ["All", ...Array.from(new Set(dbRooms.map((r: any) => r.building)))];
+  const { rooms, buildings, floors } = await getRoomsData();
 
-  // Helper form action to seed data if empty
-  async function handleSeed() {
-    "use server";
-    await seedInitialRooms();
-    revalidatePath("/rooms");
-  }
+  // Helper map for building and floor names
+  const buildingMap = new Map(buildings.map((b: any) => [b.id, b.name]));
+  const floorMap = new Map(floors.map((f: any) => [f.id, f.name]));
+
+  const buildingNames = ["All", ...Array.from(new Set(buildings.map((b: any) => b.name)))];
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Rooms & Beds</h1>
-          <p className="text-gray-500 mt-1">Manage allocations and maintenance (Live from MongoDB)</p>
+          <p className="text-gray-500 mt-1">Manage allocations and maintenance</p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
-          {dbRooms.length === 0 && (
-            <form action={handleSeed}>
-              <button type="submit" className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-xl px-5 py-3 text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm">
-                <Database className="w-4 h-4" />
-                Seed Sample Rooms
-              </button>
-            </form>
-          )}
           <button className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white rounded-xl px-5 py-3 text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
             <Plus className="w-4 h-4" />
             Add Room
@@ -48,7 +38,7 @@ export default async function RoomsPage() {
           />
         </div>
         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
-          {buildings.length > 1 ? buildings.map((b: any, i) => (
+          {buildingNames.length > 1 ? buildingNames.map((b: any, i: number) => (
             <button 
               key={b} 
               className={cn(
@@ -63,9 +53,6 @@ export default async function RoomsPage() {
           )) : (
             <button className="px-5 py-3 rounded-xl text-sm font-medium bg-gray-900 text-white">All</button>
           )}
-          <button className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-700 hover:border-blue-600 flex items-center justify-center">
-            <SlidersHorizontal className="w-5 h-5" />
-          </button>
         </div>
       </div>
 
@@ -82,23 +69,22 @@ export default async function RoomsPage() {
         </div>
       </div>
 
-      {dbRooms.length === 0 ? (
+      {rooms.length === 0 ? (
         <div className="text-center py-20 bg-white border border-dashed border-gray-300 rounded-2xl">
-          <p className="text-gray-500 mb-4">No rooms found in MongoDB.</p>
-          <p className="text-sm text-gray-400">Click the "Seed Sample Rooms" button above to add test data.</p>
+          <p className="text-gray-500 mb-4">No rooms found.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dbRooms.map((room: any) => {
-            const availableCount = room.beds.filter((b: any) => b.status === "available").length;
-            const occupiedCount = room.beds.filter((b: any) => b.status === "occupied").length;
+          {rooms.map((room: any) => {
+            const availableCount = room.beds.filter((b: any) => b.status === "Available").length;
+            const occupiedCount = room.beds.filter((b: any) => b.status === "Occupied").length;
             
             return (
-              <div key={room._id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:border-blue-300 transition-colors">
+              <div key={room.id} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:border-blue-300 transition-colors">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">{room.name}</h3>
-                    <p className="text-sm text-gray-500">{room.building} • {room.floor}</p>
+                    <h3 className="text-lg font-bold text-gray-900">Room {room.roomNumber}</h3>
+                    <p className="text-sm text-gray-500">{buildingMap.get(room.buildingId)} • {floorMap.get(room.floorId)}</p>
                   </div>
                   <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-full">
                     {room.sharingType}
@@ -110,11 +96,11 @@ export default async function RoomsPage() {
                     <div key={bed.id} className="flex items-center gap-2">
                       <span className={cn(
                         "w-3 h-3 rounded-full",
-                        bed.status === "available" && "bg-green-500",
-                        bed.status === "occupied" && "bg-red-500",
-                        bed.status === "maintenance" && "bg-yellow-500",
+                        bed.status === "Available" && "bg-green-500",
+                        bed.status === "Occupied" && "bg-red-500",
+                        bed.status === "Maintenance" && "bg-yellow-500",
                       )}></span>
-                      <span className="text-sm font-medium text-gray-700">{bed.id}</span>
+                      <span className="text-sm font-medium text-gray-700">{bed.bedNumber}</span>
                     </div>
                   ))}
                 </div>

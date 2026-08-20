@@ -1,65 +1,74 @@
 "use server";
 
 import connectToDatabase from "@/lib/mongodb";
-import { Room } from "@/models/Room";
-import { Resident } from "@/models/Resident";
-import { Payment } from "@/models/Payment";
+import { RoomModel, ResidentModel, PaymentModel, ApplicationModel } from "@/models/index";
 
 export async function getDashboardStats() {
   try {
     await connectToDatabase();
     
-    const rooms = await Room.find({}).lean();
-    const residents = await Resident.find({}).lean();
-    const payments = await Payment.find({}).lean();
+    const rooms = await RoomModel.find({}).lean();
+    const residents = await ResidentModel.find({ status: "ACTIVE" }).lean();
+    const applications = await ApplicationModel.find({ status: "PENDING" }).lean();
+    
+    // For payments, the Vite logic was using "August 2026" as the current month. Let's make it dynamic.
+    const date = new Date();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const currentMonth = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+    
+    const payments = await PaymentModel.find({ billingMonth: currentMonth, paymentType: "Rent" }).lean();
 
     // Calculate Beds
     let totalBeds = 0;
     let occupiedBeds = 0;
+    let maintenanceBeds = 0;
+    
     rooms.forEach((room: any) => {
       totalBeds += room.beds.length;
-      occupiedBeds += room.beds.filter((b: any) => b.status === "occupied").length;
+      occupiedBeds += room.beds.filter((b: any) => b.status === "Occupied").length;
+      maintenanceBeds += room.beds.filter((b: any) => b.status === "Maintenance").length;
     });
-    const vacantBeds = totalBeds - occupiedBeds;
+    const vacantBeds = totalBeds - occupiedBeds - maintenanceBeds;
 
     // Calculate Applications
-    const pendingApps = residents.filter((r: any) => r.status === "Application Pending").length;
+    const pendingApps = applications.length;
 
     // Calculate Payments
-    let expected = 0;
-    let collected = 0;
-    let due = 0;
-    
-    payments.forEach((p: any) => {
-      expected += (p.amountExpected || 0);
-      collected += (p.amountPaid || 0);
-      due += (p.amountRemaining || 0);
-    });
+    const expected = residents.reduce((sum: number, r: any) => sum + (r.monthlyRent || 0), 0);
+    const collected = payments.reduce((sum: number, p: any) => sum + (p.amountPaid || 0), 0);
+    const due = Math.max(0, expected - collected);
 
-    // Recent Payments List
-    const recentPayments = payments
-      .filter((p: any) => p.status === "Due" || p.status === "Overdue")
-      .map((p: any) => {
-        const res = residents.find((r: any) => r._id.toString() === p.residentId.toString());
-        const room = res ? rooms.find((r: any) => r._id.toString() === res.roomId?.toString()) : null;
-        return {
-          id: p._id.toString(),
-          tenantName: res ? res.name : "Unknown",
-          status: p.status,
-          amount: p.amountRemaining,
-          roomName: room ? room.name : "-"
-        }
-      });
+    // List of residents with dues for current month
+    const residentsWithDues = residents.map((res: any) => {
+      const resPayments = payments.filter((p: any) => p.residentId === res.id);
+      const paid = resPayments.reduce((sum: number, p: any) => sum + p.amountPaid, 0);
+      const amountDue = Math.max(0, (res.monthlyRent || 0) - paid);
+      return {
+        ...res,
+        paidForMonth: paid,
+        dueForMonth: amountDue
+      };
+    }).filter((r: any) => r.dueForMonth > 0);
+
+    const recentPayments = residentsWithDues.map((res: any) => ({
+      id: res.id,
+      tenantName: res.fullName,
+      status: res.paidForMonth > 0 ? "Partially Paid" : "Due",
+      amount: res.dueForMonth,
+      roomName: `${res.roomNumber}-${res.bedNumber}`
+    }));
 
     return {
       totalBeds,
       occupiedBeds,
       vacantBeds,
+      maintenanceBeds,
       pendingApps,
       payment: {
         expected,
         collected,
-        due
+        due,
+        currentMonth
       },
       recentPayments: JSON.parse(JSON.stringify(recentPayments))
     };
